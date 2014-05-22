@@ -1,7 +1,7 @@
 Repro.Research.PeerAssessment_2
 ===============================
 
-## Homework No. 2 for module Reproducible Research
+## Homework No. 2 for Reproducible Research module
 
 **(https://class.coursera.org/repdata-002/human_grading/view/courses/972084/assessments/4/submissions)**
 
