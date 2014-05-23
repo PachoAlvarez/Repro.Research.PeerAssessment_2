@@ -38,7 +38,23 @@ setwd("D:/aToCoursera")
 download.file("https://d396qusza40orc.cloudfront.net/
               repdata%2Fdata%2FStormData.csv.bz2", "StormData.csv.bz2")
 
-data <- read.csv("repdata-data-StormData.csv", header=T)
+#----- para leer linea x linea, la BD y no saturar la memoria
+# install.packages('iterators')
+# library(iterators)
+# con <- bzfile('1988.csv.bz2', 'r')
+# it <- ireadLines(con, n=1)
+# nextElem(it)
+# nextElem(it)
+# tryCatch(expr=nextElem(it), error=function(e) return(FALSE))
+#-----
+
+data <- read.csv("StormData.csv.bz2")
+
+integer.columns <- sapply(data, is.integer)
+factor.columns  <- sapply(data, is.factor)
+factor.levels   <- lapply(data[, factor.columns], levels)
+
+# data <- read.csv(unzip("StormData.csv.bz2"), stringsAsFactors=F, header=T)
 
 #---------------------------< Assignment
 # The basic goal of this assignment is to explore the NOAA Storm Database and
