@@ -80,7 +80,7 @@ INJURIES.sum   <- aggregate(INJURIES ~ EVTYPE, data = data.PopulationDMG,
                             FUN = sum)
 INJURIES.sum   <- INJURIES.sum[with(INJURIES.sum, order(-INJURIES)), ]
 
-# subset for Q2: economic consequences
+#---------------------------< Subset for Q2: economic consequences >------------
 data.EconomicDMG          <- subset(data, PROPDMG > 0 | CROPDMG > 0, 
                                     select = c("EVTYPE", "PROPDMG", "PROPDMGEXP",
                                                "CROPDMG", "CROPDMGEXP"))
@@ -174,14 +174,15 @@ par(mar = c(5.1, 4.1, 4.1, 2.1))
 par(oma = c(0, 0, 3, 0))
 #-------------------------
 tmp.arrayL <- head(rpta.Q1a, 7)
+tmp.arrayR <- head(rpta.Q1b, 7)
 tmp.arrayL <- t(tmp.arrayL)
+tmp.arrayR <- t(tmp.arrayR)
+
 barplot(tmp.arrayL, beside = TRUE,
         col = c("lightblue", "lavender"),
         legend = rownames(tmp.arrayL))
 title(main = "Decreasing Order of Fatalities", font.main = 2)
 #-------------------------
-tmp.arrayR <- head(rpta.Q1b, 7)
-tmp.arrayR <- t(tmp.arrayR)
 barplot(tmp.arrayR, beside = TRUE,
         col = c("mistyrose", "cornsilk"),
         legend = rownames(tmp.arrayR))
@@ -195,7 +196,8 @@ barplot(tmp.arrayR[, -1], beside = TRUE,
         col = c("mistyrose", "cornsilk"))
 title(main = "Without the firsth left", font.main = 6)
 #-------------------------
-title(main = "Impact Level in Population Health", outer = T, font.main = 2)
+title(main = "Impact Level in Population Health", outer = T, font.main = 2,
+      sub = "sub título", xlab = "rótulos para el eje X")
 #-------------------------
 rm(FATALITIES.sum, INJURIES.sum, rpta.Q1, rpta.Q1a, rpta.Q1b, tmp.arrayL, tmp.arrayR)
 #=============================================================
@@ -219,17 +221,18 @@ rpta.Q2b[, 1]       <- NULL
 rpta.Q2t            <- rpta.Q2[with(rpta.Q2, order(-Total)), ]
 row.names(rpta.Q2t) <- rpta.Q2t[, 1]
 rpta.Q2t[, 1]       <- NULL
+rpta.Q2t
 
 
 #---------------  Tabular display  ---------------
-head(rpta.Q2a, 10)
-head(rpta.Q2b, 10)
+head(rpta.Q2a, 10)[, 1]
+head(rpta.Q2b, 10)[, 2]
 head(rpta.Q2t, 10)
 #---------------  Graphic display  ---------------
 tmp.array <- head(rpta.Q2t, 5)
 tmp.array <- t(tmp.array)
 par(mfrow = c(1, 1))
-barplot(tmp.array[3,], beside = TRUE, col = c("red"))
+barplot(tmp.array[3,], beside = TRUE, col = c("red"), ylab="in billions of Dollars")
 title(main = "Decreasing Order of Ecomic Lost", font.main = 2)
 #-----
 # par(mfrow = c(2, 1))   # <======   NO FUNCIONÓ COMO YO QUERÍA **************

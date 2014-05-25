@@ -1,0 +1,190 @@
+# ¡ DANGER TORNADOES & FLOODS !  
+## The Twister caused more deaths and the Floods causes more material losses in the last 60 years than any other weather phenomenon.
+**by Francisco J. Álvarez-Vargas**
+========================================================
+
+## SYNOPSIS
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+The U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage. The events in the database start in the year 1950 and end in November 2011. 
+
+I analyzed this database to find events that cause more damage to the health of people and produce the greatest property damage.
+
+## DATA PROCESSING
+**----------< Packages used >----------**
+```{r}
+library(plyr)
+```
+
+
+**----------< Read Data >----------**
+```{r}
+setwd("D:/aToCoursera")
+data.file <- "repdata-data-StormData.csv.bz2"
+if (!file.exists(data.file)) {
+        download.file("https://d396qusza40orc.cloudfront.net/
+                      repdata%2Fdata%2FStormData.csv.bz2", data.file)
+}
+data <- read.csv(data.file, header=T, stringsAsFactors=T, nrows = 5)
+vars.target = c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", 
+                "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
+columns.target  <- names(data) %in% vars.target
+data            <- read.csv(data.file, header=T, stringsAsFactors=T)[columns.target]
+data$date       <- as.Date(data$BGN_DATE, "%m/%d/%Y")
+data$PROPDMGEXP <- as.character(data$PROPDMGEXP)
+data$CROPDMGEXP <- as.character(data$CROPDMGEXP)
+
+rm(columns.target, data.file, vars.target)
+```
+
+**----------< Preparing Data >----------**
+For analysis about population health:
+```{r}
+data.PopulationDMG        <- subset(data, FATALITIES > 0 | INJURIES > 0, 
+                                    select = c("EVTYPE", "FATALITIES", 
+                                               "INJURIES"))
+data.PopulationDMG$EVTYPE <- tolower(data.PopulationDMG$EVTYPE)
+# (fatalities, injuries) by event type
+FATALITIES.sum <- aggregate(FATALITIES ~ EVTYPE, data = data.PopulationDMG, 
+                            FUN = sum)
+FATALITIES.sum <- FATALITIES.sum[with(FATALITIES.sum, order(-FATALITIES)), ]
+
+INJURIES.sum   <- aggregate(INJURIES ~ EVTYPE, data = data.PopulationDMG,
+                            FUN = sum)
+INJURIES.sum   <- INJURIES.sum[with(INJURIES.sum, order(-INJURIES)), ]
+
+#-----
+rm(data.PopulationDMG)
+```
+
+For analysis about economic impact:
+```{r}
+data.EconomicDMG          <- subset(data, PROPDMG > 0 | CROPDMG > 0, 
+                                    select = c("EVTYPE", "PROPDMG", "PROPDMGEXP",
+                                               "CROPDMG", "CROPDMGEXP"))
+data.EconomicDMG$EVTYPE   <- tolower(data.EconomicDMG$EVTYPE)
+
+multiply        <- c(10^(0:9), 10^2, 10^2, 10^3, 10^3, 10^6, 10^6, 10^9, 10^9,
+                     1, 1, 1, 1)
+names(multiply) <- c(0:9, "h", "H", "k", "K", "m", "M", "b", "B", "-", "+",
+                     "?", NA)
+data.EconomicDMG$PROPDMGnew <- multiply[data.EconomicDMG$PROPDMGEXP]*data.EconomicDMG$PROPDMG
+data.EconomicDMG$CROPDMGnew <- multiply[data.EconomicDMG$CROPDMGEXP]*data.EconomicDMG$CROPDMG
+
+# damage (property, crop, total) by event type
+PROPDMG.sum <- aggregate(PROPDMGnew ~ EVTYPE, data = data.EconomicDMG, FUN = sum)
+PROPDMG.sum <- PROPDMG.sum[with(PROPDMG.sum, order(-PROPDMGnew)), ]
+
+CROPDMG.sum <- aggregate(CROPDMGnew ~ EVTYPE, data = data.EconomicDMG, FUN = sum)
+CROPDMG.sum <- CROPDMG.sum[with(CROPDMG.sum, order(-CROPDMGnew)), ]
+#-----
+rm(data.EconomicDMG, multiply)
+```
+
+
+## RESULTS
+Now, I can calculated the impact of different types of events in both, population and economy:
+
+**----------< Q1: Population Healt >----------**
+```{r}
+rpta.Q1 <- arrange(join(FATALITIES.sum, INJURIES.sum), EVTYPE)
+
+rpta.Q1a <- rpta.Q1[with(rpta.Q1, order(-FATALITIES)), ]
+row.names(rpta.Q1a) <- rpta.Q1a[, 1]
+rpta.Q1a[, 1] <- NULL
+
+rpta.Q1b <- rpta.Q1[with(rpta.Q1, order(-INJURIES)), ]
+row.names(rpta.Q1b) <- rpta.Q1b[, 1]
+rpta.Q1b[, 1] <- NULL
+```
+
+Summarizing in two tables. First, in Table No. 1, the Top-10 of the events that cause deaths:
+```{r "Table No. 1. Top-10 Events in Deaths"}
+head(rpta.Q1a, 10)
+```
+and, in Table No. 2, the Top-10 of the events that cause personal injurys:
+```{r "Table No. 2. Top-10 Events in Personal Injurys"}
+head(rpta.Q1b, 10)
+```
+Notably, tornadoes are leading the two lists. Excessive heat occupies a remarkable position in both.
+
+```{r message=TRUE, fig.width=7, fig.height=6, "Fig. No. 1.Impact Level in Population Health"}
+par(mfrow = c(2, 2))
+par(mar = c(5.1, 4.1, 4.1, 2.1))
+par(oma = c(0, 0, 3, 0))
+
+tmp.arrayL <- head(rpta.Q1a, 7)
+tmp.arrayL <- t(tmp.arrayL)
+barplot(tmp.arrayL, beside = TRUE,
+        col = c("lightblue", "lavender"),
+        legend = rownames(tmp.arrayL))
+title(main = "Decreasing Order of Fatalities", font.main = 2)
+
+tmp.arrayR <- head(rpta.Q1b, 7)
+tmp.arrayR <- t(tmp.arrayR)
+barplot(tmp.arrayR, beside = TRUE,
+        col = c("mistyrose", "cornsilk"),
+        legend = rownames(tmp.arrayR))
+title(main = "Decreasing Order of Injuries", font.main = 2)
+
+barplot(tmp.arrayL[, -1], beside = TRUE,
+        col = c("lightblue", "lavender"))
+title(main = "Without the firsth left", font.main = 6)
+
+barplot(tmp.arrayR[, -1], beside = TRUE,
+        col = c("mistyrose", "cornsilk"))
+title(main = "Without the firsth left", font.main = 6)
+
+title(main = "Impact Level in Population Health", outer = T, font.main = 2)
+#-----
+rm(FATALITIES.sum, INJURIES.sum, rpta.Q1, rpta.Q1a, rpta.Q1b, tmp.arrayL, tmp.arrayR)
+```
+
+**----------< Q2: Economic Impact >----------**
+```{r}
+rpta.Q2        <- arrange(join(PROPDMG.sum, CROPDMG.sum), EVTYPE)
+rpta.Q2[, 2:3] <- rpta.Q2[, 2:3] / 1e9
+names(rpta.Q2) <- c("EVTYPE", "Property", "Crop")
+rpta.Q2$Total  <- rpta.Q2$Property + rpta.Q2$Crop
+
+rpta.Q2a            <- rpta.Q2[with(rpta.Q2, order(-Property)), ]
+row.names(rpta.Q2a) <- rpta.Q2a[, 1]
+rpta.Q2a[, 1]       <- NULL
+
+rpta.Q2b            <- rpta.Q2[with(rpta.Q2, order(-Crop)), ]
+row.names(rpta.Q2b) <- rpta.Q2b[, 1]
+rpta.Q2b[, 1]       <- NULL
+
+rpta.Q2t            <- rpta.Q2[with(rpta.Q2, order(-Total)), ]
+row.names(rpta.Q2t) <- rpta.Q2t[, 1]
+rpta.Q2t[, 1]       <- NULL
+```
+
+In Table No. 3, the Top-10 events in economic impact, defined like the sum of properties damage and crop damage. The first two columns represent the percentages of damage to property and crop damage for the total of each event. The TOTAL values are in billion of dollars:
+```{r "Table No. 3. Top-10 Events in Toatal Economic Impact"}
+tmp <- head(rpta.Q2t, 10)
+tmp[, 1] <- tmp[, 1]/tmp[, 3]*100
+tmp[, 2] <- tmp[, 2]/tmp[, 3]*100
+names(tmp) <- c("Property [%]", "Crop [%]", "TOTAL")
+tmp
+```
+In tables Nos. 4, and 5, I show the Top-10 events respect to properties damage or crop damage respectively, all values are in billion of dollars:
+```{r "Table No. 4. Top-10 Events in Properties Damage Economic Impact"}
+head(rpta.Q2a, 10)
+```
+```{r "Table No. 5. Top-10 Events in Crop Damage Economic Impact"}
+head(rpta.Q2b, 10)
+```
+For the total economic impact, I present the same data of Table No. 3, in the Fig. No. 2:
+```{r fig.width=7, fig.height=6, "Fig. No. 2.Impact Level in Population Health"}
+tmp.array <- head(rpta.Q2t, 5)
+tmp.array <- t(tmp.array)
+par(mfrow = c(1, 1))
+barplot(tmp.array[3,], beside = TRUE, col = c("red"), 
+        xlab="Event type" , ylab="in billions of Dollars")
+title(main = "Decreasing Order of Ecomic Lost", font.main = 2)
+#-----
+rm(CROPDMG.sum, PROPDMG.sum, rpta.Q2, rpta.Q2a, rpta.Q2b, rpta.Q2t, tmp, 
+   tmp.array)
+```
+
