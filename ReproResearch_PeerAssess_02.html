@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta http-equiv="x-ua-compatible" content="IE=9" >
 
-<title>¡ DANGER TORNADOES !</title>
+<title>¡ DANGER TORNADOES &amp; FLOODS !</title>
 
 <style type="text/css">
 body, td {
@@ -179,9 +179,9 @@ hljs.initHighlightingOnLoad();
 </head>
 
 <body>
-<h1>¡ DANGER TORNADOES !</h1>
+<h1>¡ DANGER TORNADOES &amp; FLOODS !</h1>
 
-<h2>The twister caused more deaths and material losses in the last 60 years than any other weather phenomenon.</h2>
+<h2>The Twister caused more deaths and the Floods causes more material losses in the last 60 years than any other weather phenomenon.</h2>
 
 <h1><strong>by Francisco J. Álvarez-Vargas</strong></h1>
 
@@ -200,7 +200,18 @@ hljs.initHighlightingOnLoad();
 <pre><code class="r">library(plyr)
 </code></pre>
 
-<p><strong>&mdash;&mdash;&mdash;-&lt; Read Data &gt;&mdash;&mdash;&mdash;-</strong></p>
+<p><strong>&mdash;&mdash;&mdash;-&lt; Read Data &gt;&mdash;&mdash;&mdash;-</strong>
+Reviewing the pdf accompanying data, data.book, necessary for the analysis variables are selected. So only the columns corresponding to these variables are passed to data.frame data: </p>
+
+<ul>
+<li>&ldquo;EVTYPE&rdquo;, type of event.</li>
+<li>&ldquo;FATALITIES&rdquo;, number of fatal events.</li>
+<li>&ldquo;INJURIES&rdquo;, number of nonfatal personal lessons.</li>
+<li>&ldquo;PROPDMG&rdquo;, economic damage to property.</li>
+<li>&ldquo;PROPDMGEXP&rdquo;, order of magnitude of property damage.</li>
+<li>&ldquo;CROPDMG&rdquo;, economic damage to crops.</li>
+<li>&ldquo;CROPDMGEXP&rdquo;, order of magnitude of crop damage.</li>
+</ul>
 
 <pre><code class="r">setwd(&quot;D:/aToCoursera&quot;)
 data.file &lt;- &quot;repdata-data-StormData.csv.bz2&quot;
@@ -211,35 +222,231 @@ if (!file.exists(data.file)) {
 data &lt;- read.csv(data.file, header = T, stringsAsFactors = T, nrows = 5)
 vars.target = c(&quot;EVTYPE&quot;, &quot;FATALITIES&quot;, &quot;INJURIES&quot;, &quot;PROPDMG&quot;, &quot;PROPDMGEXP&quot;, 
     &quot;CROPDMG&quot;, &quot;CROPDMGEXP&quot;)
-# columns.target &lt;- names(data) %in% vars.target data &lt;- read.csv(data.file,
-# header=T, stringsAsFactors=T)[columns.target] data$date &lt;-
-# as.Date(data$BGN_DATE, &#39;%m/%d/%Y&#39;) data$PROPDMGEXP &lt;-
-# as.character(data$PROPDMGEXP) data$CROPDMGEXP &lt;-
-# as.character(data$CROPDMGEXP) rm(columns.target, data.file, vars.target)
+columns.target &lt;- names(data) %in% vars.target
+data &lt;- read.csv(data.file, header = T, stringsAsFactors = T)[columns.target]
+data$PROPDMGEXP &lt;- as.character(data$PROPDMGEXP)
+data$CROPDMGEXP &lt;- as.character(data$CROPDMGEXP)
 </code></pre>
 
-<p><strong>&mdash;&mdash;&mdash;-&lt; Preparing Data &gt;&mdash;&mdash;&mdash;-</strong></p>
+<p><strong>&mdash;&mdash;&mdash;-&lt; Preparing Data &gt;&mdash;&mdash;&mdash;-</strong>
+For analysis about population health:</p>
+
+<p>I use a database for the assessment of events according to the attacks on human health. And another database for the assessment of the events regarding the economic damage. The two data frames are subsets of the previously read data.</p>
+
+<pre><code class="r">data.PopulationDMG &lt;- subset(data, FATALITIES &gt; 0 | INJURIES &gt; 0, select = c(&quot;EVTYPE&quot;, 
+    &quot;FATALITIES&quot;, &quot;INJURIES&quot;))
+data.PopulationDMG$EVTYPE &lt;- tolower(data.PopulationDMG$EVTYPE)
+# (fatalities, injuries) by event type
+FATALITIES.sum &lt;- aggregate(FATALITIES ~ EVTYPE, data = data.PopulationDMG, 
+    FUN = sum)
+FATALITIES.sum &lt;- FATALITIES.sum[with(FATALITIES.sum, order(-FATALITIES)), ]
+
+INJURIES.sum &lt;- aggregate(INJURIES ~ EVTYPE, data = data.PopulationDMG, FUN = sum)
+INJURIES.sum &lt;- INJURIES.sum[with(INJURIES.sum, order(-INJURIES)), ]
+</code></pre>
+
+<p>For analysis about economic impact:</p>
+
+<p>To have the same base monetary, economic injury damages multiplied by 10 to the corresponding order of magnitude. The orders of magnitude are converted to numbers: h, H, are one hundred (order 2), k, K are thousand (order 3), m, M are million (order 6) &hellip; For some values reported as appears magnitude by a &ldquo;-&rdquo; or &ldquo;+&rdquo;, or, or NA, &ldquo;?&rdquo; in these cases, I assume that the order of magnitude is 1. </p>
+
+<p>The total financial loss is calculated as the sum of the loss from property damage plus loss for damage to crops, totaled for each event.</p>
+
+<pre><code class="r">data.EconomicDMG &lt;- subset(data, PROPDMG &gt; 0 | CROPDMG &gt; 0, select = c(&quot;EVTYPE&quot;, 
+    &quot;PROPDMG&quot;, &quot;PROPDMGEXP&quot;, &quot;CROPDMG&quot;, &quot;CROPDMGEXP&quot;))
+data.EconomicDMG$EVTYPE &lt;- tolower(data.EconomicDMG$EVTYPE)
+
+multiply &lt;- c(10^(0:9), 10^2, 10^2, 10^3, 10^3, 10^6, 10^6, 10^9, 10^9, 1, 1, 
+    1, 1)
+names(multiply) &lt;- c(0:9, &quot;h&quot;, &quot;H&quot;, &quot;k&quot;, &quot;K&quot;, &quot;m&quot;, &quot;M&quot;, &quot;b&quot;, &quot;B&quot;, &quot;-&quot;, &quot;+&quot;, 
+    &quot;?&quot;, NA)
+data.EconomicDMG$PROPDMGnew &lt;- multiply[data.EconomicDMG$PROPDMGEXP] * data.EconomicDMG$PROPDMG
+data.EconomicDMG$CROPDMGnew &lt;- multiply[data.EconomicDMG$CROPDMGEXP] * data.EconomicDMG$CROPDMG
+
+# damage (property, crop, total) by event type
+PROPDMG.sum &lt;- aggregate(PROPDMGnew ~ EVTYPE, data = data.EconomicDMG, FUN = sum)
+PROPDMG.sum &lt;- PROPDMG.sum[with(PROPDMG.sum, order(-PROPDMGnew)), ]
+
+CROPDMG.sum &lt;- aggregate(CROPDMGnew ~ EVTYPE, data = data.EconomicDMG, FUN = sum)
+CROPDMG.sum &lt;- CROPDMG.sum[with(CROPDMG.sum, order(-CROPDMGnew)), ]
+</code></pre>
 
 <h2>RESULTS</h2>
 
-<pre><code class="r">summary(cars)
+<p>Now, I can calculated the impact of different types of events in both, population and economy:</p>
+
+<p><strong>&mdash;&mdash;&mdash;-&lt; Q1: Population Healt &gt;&mdash;&mdash;&mdash;-</strong></p>
+
+<pre><code class="r">rpta.Q1 &lt;- arrange(join(FATALITIES.sum, INJURIES.sum), EVTYPE)
 </code></pre>
 
-<pre><code>##      speed           dist    
-##  Min.   : 4.0   Min.   :  2  
-##  1st Qu.:12.0   1st Qu.: 26  
-##  Median :15.0   Median : 36  
-##  Mean   :15.4   Mean   : 43  
-##  3rd Qu.:19.0   3rd Qu.: 56  
-##  Max.   :25.0   Max.   :120
+<pre><code>## Joining by: EVTYPE
 </code></pre>
 
-<p>You can also embed plots, for example:</p>
+<pre><code class="r">
+rpta.Q1a &lt;- rpta.Q1[with(rpta.Q1, order(-FATALITIES)), ]
+row.names(rpta.Q1a) &lt;- rpta.Q1a[, 1]
+rpta.Q1a[, 1] &lt;- NULL
 
-<pre><code class="r">plot(cars)
+rpta.Q1b &lt;- rpta.Q1[with(rpta.Q1, order(-INJURIES)), ]
+row.names(rpta.Q1b) &lt;- rpta.Q1b[, 1]
+rpta.Q1b[, 1] &lt;- NULL
 </code></pre>
 
-<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-5"/> </p>
+<p>Summarizing in two tables. First, in Table No. 1, the Top-10 of the events that cause deaths:</p>
+
+<pre><code class="r">head(rpta.Q1a, 10)
+</code></pre>
+
+<pre><code>##                FATALITIES INJURIES
+## tornado              5633    91346
+## excessive heat       1903     6525
+## flash flood           978     1777
+## heat                  937     2100
+## lightning             816     5230
+## tstm wind             504     6957
+## flood                 470     6789
+## rip current           368      232
+## high wind             248     1137
+## avalanche             224      170
+</code></pre>
+
+<p>and, in Table No. 2, the Top-10 of the events that cause personal injurys:</p>
+
+<pre><code class="r">head(rpta.Q1b, 10)
+</code></pre>
+
+<pre><code>##                   FATALITIES INJURIES
+## tornado                 5633    91346
+## tstm wind                504     6957
+## flood                    470     6789
+## excessive heat          1903     6525
+## lightning                816     5230
+## heat                     937     2100
+## ice storm                 89     1975
+## flash flood              978     1777
+## thunderstorm wind        133     1488
+## hail                      15     1361
+</code></pre>
+
+<p>Notably, tornadoes are leading the two lists. Excessive heat occupies a remarkable position in both.</p>
+
+<pre><code class="r">par(mfrow = c(2, 2))
+par(mar = c(5.1, 4.1, 4.1, 2.1))
+par(oma = c(0, 0, 3, 0))
+
+tmp.arrayL &lt;- head(rpta.Q1a, 7)
+tmp.arrayL &lt;- t(tmp.arrayL)
+barplot(tmp.arrayL, beside = TRUE, col = c(&quot;lightblue&quot;, &quot;lavender&quot;), legend = rownames(tmp.arrayL))
+title(main = &quot;Decreasing Order of Fatalities&quot;, font.main = 2)
+
+tmp.arrayR &lt;- head(rpta.Q1b, 7)
+tmp.arrayR &lt;- t(tmp.arrayR)
+barplot(tmp.arrayR, beside = TRUE, col = c(&quot;mistyrose&quot;, &quot;cornsilk&quot;), legend = rownames(tmp.arrayR))
+title(main = &quot;Decreasing Order of Injuries&quot;, font.main = 2)
+
+barplot(tmp.arrayL[, -1], beside = TRUE, col = c(&quot;lightblue&quot;, &quot;lavender&quot;))
+title(main = &quot;Without the firsth left&quot;, font.main = 6)
+
+barplot(tmp.arrayR[, -1], beside = TRUE, col = c(&quot;mistyrose&quot;, &quot;cornsilk&quot;))
+title(main = &quot;Without the firsth left&quot;, font.main = 6)
+
+title(main = &quot;Impact Level in Population Health&quot;, outer = T, font.main = 2)
+</code></pre>
+
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfgAAAGwCAMAAABy/YdMAAAA3lBMVEX9/v0AAAAAACoAAFQAKioAKn8AVakqAAAqACoqAFQqKgAqKioqKlQqKn8qVVQqVX8qVakqf9NUAABUACpUAFRUKn9UVQBUVSpUVVRUVX9UValUf6lUqdNUqf1/KgB/Kip/KlR/VQB/VVR/fyp/f1R/f39/f6l/qX9/qf1/1Kl/1NN/1P2pVQCpVSqpfyqpf3+pqVSp1H+p1P2p/qmp/tOp/v2t2ObTfyrTf1TTf3/TqVTT1H/T1KnT1NPT/qnT/tPT/v3m5vr9qVT9qX/91H/9/qn9/tP9/v3/5OH/+NywPPnjAAAASnRSTlP//////////////////////////////////////////////////////////////////////////////////////////////wD//8mxZHsAAAAJcEhZcwAACxIAAAsSAdLdfvwAABRoSURBVHic7Z0Jf+PEGcZR0tgLIRCZ3S4UnABtgWKlsIWg5VqMsCP4/l+oc+k+rGus43meX2JnNOc7f81hWXn1VkhB6q2xG0CNI4IHFcGDiuBBRfCgInhQETyoCB5UBA8qggcVwYOK4EFF8KCaNvjA2Z5Mc7iVr8fNqr6QTFHHjSPknqxUlF3WhMNaZPUvdsV8IoOKnL5mD94QPwm+mMnLkyukryq0ErzMQPADSPRl4Ly3dq7+K8en+lN2uR6th7V4e7pznKt9wkgcvNg93a1C+asCyYg/rHV+k1oSilKoiED8epePMr2qQpX9kxzHKlWSPQavI0yDAucTmeHn9XXlZDIhzQD81d53VpqI/HN7eLaTIQnPDLIwBi+RiDhfRm9NIAX+6re7y8cwAS/fBUBTcAK+WIVIlWSPwJsKTOp4xEfJJq0ZgHfVmFV8XN3ngePIkJqRs+B9PcIFiuBiZwIp8IpTmEz1etS6puDUiNdVGPAmVZJdzjUy3o/mk6hB0VTvEXw/5cFvJbLD+vJRQisF7zh6knZ9OYhVoBS8jFGFypym4NSI11WkwKt6E/B6xJsKTGqCH06lI15yiGfwkhGv3leeGwWqRnwYrdPFEW+qqB7xBryuIGkQwQ+kPHgxitVQP270cDTLdJhZ4zUnDSuaKCrAH9arVMGqNA0+qULlW6VW9DC7xicNIvjh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" alt="plot of chunk Fig. No. 1.Impact Level in Population Health"/> </p>
+
+<p><strong>&mdash;&mdash;&mdash;-&lt; Q2: Economic Impact &gt;&mdash;&mdash;&mdash;-</strong></p>
+
+<pre><code class="r">rpta.Q2 &lt;- arrange(join(PROPDMG.sum, CROPDMG.sum), EVTYPE)
+</code></pre>
+
+<pre><code>## Joining by: EVTYPE
+</code></pre>
+
+<pre><code class="r">rpta.Q2[, 2:3] &lt;- rpta.Q2[, 2:3]/1e+09
+names(rpta.Q2) &lt;- c(&quot;EVTYPE&quot;, &quot;Property&quot;, &quot;Crop&quot;)
+rpta.Q2$Total &lt;- rpta.Q2$Property + rpta.Q2$Crop
+
+rpta.Q2a &lt;- rpta.Q2[with(rpta.Q2, order(-Property)), ]
+row.names(rpta.Q2a) &lt;- rpta.Q2a[, 1]
+rpta.Q2a[, 1] &lt;- NULL
+
+rpta.Q2b &lt;- rpta.Q2[with(rpta.Q2, order(-Crop)), ]
+row.names(rpta.Q2b) &lt;- rpta.Q2b[, 1]
+rpta.Q2b[, 1] &lt;- NULL
+
+rpta.Q2t &lt;- rpta.Q2[with(rpta.Q2, order(-Total)), ]
+row.names(rpta.Q2t) &lt;- rpta.Q2t[, 1]
+rpta.Q2t[, 1] &lt;- NULL
+</code></pre>
+
+<p>In Table No. 3, the Top-10 events in economic impact, defined like the sum of properties damage and crop damage. The first two columns represent the percentages of damage to property and crop damage for the total of each event. The TOTAL values are in billion of dollars:</p>
+
+<pre><code class="r">tmp &lt;- head(rpta.Q2t, 10)
+tmp[, 1] &lt;- tmp[, 1]/tmp[, 3] * 100
+tmp[, 2] &lt;- tmp[, 2]/tmp[, 3] * 100
+names(tmp) &lt;- c(&quot;Property [%]&quot;, &quot;Crop [%]&quot;, &quot;TOTAL&quot;)
+tmp
+</code></pre>
+
+<pre><code>##                   Property [%]  Crop [%]   TOTAL
+## flood                   96.233 3.767e+00 150.320
+## hurricane/typhoon       96.374 3.626e+00  71.914
+## tornado                 99.277 7.234e-01  57.362
+## storm surge            100.000 1.154e-05  43.324
+## hail                    83.871 1.613e+01  18.761
+## flash flood             92.209 7.791e+00  18.244
+## drought                  6.965 9.303e+01  15.019
+## hurricane               81.233 1.877e+01  14.610
+## river flood             50.441 4.956e+01  10.148
+## ice storm               43.994 5.601e+01   8.967
+</code></pre>
+
+<p>In tables Nos. 4, and 5, I show the Top-10 events respect to properties damage or crop damage respectively, all values are in billion of dollars:</p>
+
+<pre><code class="r">head(rpta.Q2a, 10)
+</code></pre>
+
+<pre><code>##                   Property     Crop   Total
+## flood              144.658 5.661968 150.320
+## hurricane/typhoon   69.306 2.607873  71.914
+## tornado             56.947 0.414953  57.362
+## storm surge         43.324 0.000005  43.324
+## flash flood         16.823 1.421317  18.244
+## hail                15.735 3.025954  18.761
+## hurricane           11.868 2.741910  14.610
+## tropical storm       7.704 0.678346   8.382
+## winter storm         6.688 0.026944   6.715
+## high wind            5.270 0.638571   5.909
+</code></pre>
+
+<pre><code class="r">head(rpta.Q2b, 10)
+</code></pre>
+
+<pre><code>##                    Property   Crop   Total
+## drought             1.04611 13.973  15.019
+## flood             144.65771  5.662 150.320
+## river flood         5.11895  5.029  10.148
+## ice storm           3.94493  5.022   8.967
+## hail               15.73527  3.026  18.761
+## hurricane          11.86832  2.742  14.610
+## hurricane/typhoon  69.30584  2.608  71.914
+## flash flood        16.82267  1.421  18.244
+## extreme cold        0.06774  1.313   1.381
+## frost/freeze        0.01048  1.094   1.105
+</code></pre>
+
+<p>For the total economic impact, I present the same data of Table No. 3, in the Fig. No. 2:</p>
+
+<pre><code class="r">tmp.array &lt;- head(rpta.Q2t, 5)
+tmp.array &lt;- t(tmp.array)
+par(mfrow = c(1, 1))
+barplot(tmp.array[3, ], beside = TRUE, col = c(&quot;red&quot;), xlab = &quot;Event type&quot;, 
+    ylab = &quot;in billions of Dollars&quot;)
+title(main = &quot;Decreasing Order of Ecomic Lost&quot;, font.main = 2)
+</code></pre>
+
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfgAAAGwCAMAAABy/YdMAAAAq1BMVEX9/v0AAAAAACoAAFQAKioAKlQAKn8AVVQAVX8AVakqAAAqACoqAFQqKlQqKn8qVVQqVakqf38qf9NUAABUACpUAFRUKgBUKipUKn9UVQBUVSpUVVRUqalUqf1/KgB/Kip/KlR/VQB/fyp/f1R/qX9/1Kl/1P2pVQCpVSqpqVSp1H+p/qmp/tOp/v3TfyrT1H/T/qnT/tPT/v39qVT91H/9/qn9/tP9/v3/AACuPcePAAAAOXRSTlP/////////////////////////////////////////////////////////////////////////AP+Eine/AAAACXBIWXMAAAsSAAALEgHS3X78AAAOHElEQVR4nO2dDX/qthlHS9JmTdrdraS3a7sl2UsH27rQNhDY9/9k05uxDX7D2L6S/+f8bktixGPZB8kSsR4+O4Akn33qCsCnAfGiIF4UxIuCeFEQLwriRUG8KIgXBfGiIF4UxIuCeFEQLwriRUG8KIgXBfGiIF4UxIuCeFEQLwriRUG8KIgXJVLx748Ly1OfV96+Nka9ezvZdrLhlN3D4maVV8n93H33u4fa8OseRzcccYtfLIcMahSeq2sVvw5vv27iz/dZF37d5209HNGKtw1nu7D/34Smv39e2N/3zzc/2tOfbd4GG1aredq+cv98+2/3i33N7c9Brfn5/mBP+N1biGEj/sU9G4JlsS0b976zRXwnkb9DQkWyIqYGX5rdvG5sCFfxY4Gi+FA41NPFvZ/ylJ4QtXjXKtah6btTlZ2yu7dss2+Id2/5Yyhiz6v74fNw7oMDI3flY/zmi5mtpX340n7TfYX4rCJZEffW89y+5rv35o/is8Khnr8hvpIgfrN4cmfONOHX3YM710++4R43Z6WzMxzO/NLouHtzr9kEldtwogsxwrPHYKFTONjnTMN/fzT/O+nqQ9C1rVkoYjsm046f7M++Kr6Aj5O960LhwjuBrv6cXHxoTvb0+gu+bbGHw3GzN2Kb2qLQ1buzfPfmXGdNtSTexwjPHoP57XnhjetxTsRnFTkW2bqG7HdrH7eFoUnm+Vg4qyfiK8m7+oJ47+1EvB+xmdLuB3/mXU9wJr7U1fcRH5pqVpET8W7kEMTnffiZ+KyeiK8kH9wd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" alt="plot of chunk Fig. No. 2.Impact Level in Population Health"/> </p>
 
 </body>
 

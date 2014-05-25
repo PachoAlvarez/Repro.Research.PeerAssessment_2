@@ -18,6 +18,15 @@ library(plyr)
 
 
 **----------< Read Data >----------**
+Reviewing the pdf accompanying data, data.book, necessary for the analysis variables are selected. So only the columns corresponding to these variables are passed to data.frame data: 
+- "EVTYPE", type of event.
+- "FATALITIES", number of fatal events.
+- "INJURIES", number of nonfatal personal lessons.
+- "PROPDMG", economic damage to property.
+- "PROPDMGEXP", order of magnitude of property damage.
+- "CROPDMG", economic damage to crops.
+- "CROPDMGEXP", order of magnitude of crop damage.
+
 ```{r}
 setwd("D:/aToCoursera")
 data.file <- "repdata-data-StormData.csv.bz2"
@@ -30,15 +39,15 @@ vars.target = c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG",
                 "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
 columns.target  <- names(data) %in% vars.target
 data            <- read.csv(data.file, header=T, stringsAsFactors=T)[columns.target]
-data$date       <- as.Date(data$BGN_DATE, "%m/%d/%Y")
 data$PROPDMGEXP <- as.character(data$PROPDMGEXP)
 data$CROPDMGEXP <- as.character(data$CROPDMGEXP)
-
-rm(columns.target, data.file, vars.target)
 ```
 
 **----------< Preparing Data >----------**
 For analysis about population health:
+
+I use a database for the assessment of events according to the attacks on human health. And another database for the assessment of the events regarding the economic damage. The two data frames are subsets of the previously read data.
+
 ```{r}
 data.PopulationDMG        <- subset(data, FATALITIES > 0 | INJURIES > 0, 
                                     select = c("EVTYPE", "FATALITIES", 
@@ -52,12 +61,14 @@ FATALITIES.sum <- FATALITIES.sum[with(FATALITIES.sum, order(-FATALITIES)), ]
 INJURIES.sum   <- aggregate(INJURIES ~ EVTYPE, data = data.PopulationDMG,
                             FUN = sum)
 INJURIES.sum   <- INJURIES.sum[with(INJURIES.sum, order(-INJURIES)), ]
-
-#-----
-rm(data.PopulationDMG)
 ```
 
 For analysis about economic impact:
+
+To have the same base monetary, economic injury damages multiplied by 10 to the corresponding order of magnitude. The orders of magnitude are converted to numbers: h, H, are one hundred (order 2), k, K are thousand (order 3), m, M are million (order 6) ... For some values reported as appears magnitude by a "-" or "+", or, or NA, "?" in these cases, I assume that the order of magnitude is 1. 
+
+The total financial loss is calculated as the sum of the loss from property damage plus loss for damage to crops, totaled for each event.
+
 ```{r}
 data.EconomicDMG          <- subset(data, PROPDMG > 0 | CROPDMG > 0, 
                                     select = c("EVTYPE", "PROPDMG", "PROPDMGEXP",
@@ -77,8 +88,6 @@ PROPDMG.sum <- PROPDMG.sum[with(PROPDMG.sum, order(-PROPDMGnew)), ]
 
 CROPDMG.sum <- aggregate(CROPDMGnew ~ EVTYPE, data = data.EconomicDMG, FUN = sum)
 CROPDMG.sum <- CROPDMG.sum[with(CROPDMG.sum, order(-CROPDMGnew)), ]
-#-----
-rm(data.EconomicDMG, multiply)
 ```
 
 
@@ -99,13 +108,17 @@ rpta.Q1b[, 1] <- NULL
 ```
 
 Summarizing in two tables. First, in Table No. 1, the Top-10 of the events that cause deaths:
+
 ```{r "Table No. 1. Top-10 Events in Deaths"}
 head(rpta.Q1a, 10)
 ```
+
 and, in Table No. 2, the Top-10 of the events that cause personal injurys:
+
 ```{r "Table No. 2. Top-10 Events in Personal Injurys"}
 head(rpta.Q1b, 10)
 ```
+
 Notably, tornadoes are leading the two lists. Excessive heat occupies a remarkable position in both.
 
 ```{r message=TRUE, fig.width=7, fig.height=6, "Fig. No. 1.Impact Level in Population Health"}
@@ -136,8 +149,6 @@ barplot(tmp.arrayR[, -1], beside = TRUE,
 title(main = "Without the firsth left", font.main = 6)
 
 title(main = "Impact Level in Population Health", outer = T, font.main = 2)
-#-----
-rm(FATALITIES.sum, INJURIES.sum, rpta.Q1, rpta.Q1a, rpta.Q1b, tmp.arrayL, tmp.arrayR)
 ```
 
 **----------< Q2: Economic Impact >----------**
@@ -168,6 +179,7 @@ tmp[, 2] <- tmp[, 2]/tmp[, 3]*100
 names(tmp) <- c("Property [%]", "Crop [%]", "TOTAL")
 tmp
 ```
+
 In tables Nos. 4, and 5, I show the Top-10 events respect to properties damage or crop damage respectively, all values are in billion of dollars:
 ```{r "Table No. 4. Top-10 Events in Properties Damage Economic Impact"}
 head(rpta.Q2a, 10)
@@ -175,7 +187,9 @@ head(rpta.Q2a, 10)
 ```{r "Table No. 5. Top-10 Events in Crop Damage Economic Impact"}
 head(rpta.Q2b, 10)
 ```
+
 For the total economic impact, I present the same data of Table No. 3, in the Fig. No. 2:
+
 ```{r fig.width=7, fig.height=6, "Fig. No. 2.Impact Level in Population Health"}
 tmp.array <- head(rpta.Q2t, 5)
 tmp.array <- t(tmp.array)
@@ -183,8 +197,5 @@ par(mfrow = c(1, 1))
 barplot(tmp.array[3,], beside = TRUE, col = c("red"), 
         xlab="Event type" , ylab="in billions of Dollars")
 title(main = "Decreasing Order of Ecomic Lost", font.main = 2)
-#-----
-rm(CROPDMG.sum, PROPDMG.sum, rpta.Q2, rpta.Q2a, rpta.Q2b, rpta.Q2t, tmp, 
-   tmp.array)
 ```
 

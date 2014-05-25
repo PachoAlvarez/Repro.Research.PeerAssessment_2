@@ -50,8 +50,7 @@ sapply(data, class)
 vars.target = c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", 
                 "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")
 columns.target  <- names(data) %in% vars.target
-data            <- read.csv(data.file, header=T, stringsAsFactors=T, nrows = 300000)[columns.target] # nrows
-data$date       <- as.Date(data$BGN_DATE, "%m/%d/%Y")
+data            <- read.csv(data.file, header=T, stringsAsFactors=T)[columns.target]
 data$PROPDMGEXP <- as.character(data$PROPDMGEXP)
 data$CROPDMGEXP <- as.character(data$CROPDMGEXP)
 #-----
